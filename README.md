@@ -3,7 +3,7 @@ vfkit - Command-line tool to start VMs on macOS
 
 ### Introduction
 
-Test repo for konflux testing.
+Test repo for konflux testing. (test PR)
 
 vfkit offers a command-line interface to start virtual machines using the [macOS Virtualization framework](https://developer.apple.com/documentation/virtualization).
 It also provides a `github.com/crc-org/vfkit/pkg/config` go package.
