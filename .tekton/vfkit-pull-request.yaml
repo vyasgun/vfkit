@@ -106,6 +106,26 @@ spec:
         VMs
       name: privileged-nested
       type: string
+    - default: []
+      description: List of macOS platforms to build (e.g., darwin/arm64, darwin/amd64)
+      name: macos-platforms
+      type: array
+    - default: "node,pnpm"
+      description: Build dependencies for macOS builds
+      name: macos-build-dependencies
+      type: string
+    - default: "build-scripts/macos.sh"
+      description: Build script for macOS
+      name: macos-build-script
+      type: string
+    - default: "dist"
+      description: Output directory for macOS artifacts
+      name: macos-output-directory
+      type: string
+    - default: "*-arm64.dmg"
+      description: Output artifact name for macOS
+      name: macos-output-artifact
+      type: string
     results:
     - description: ""
       name: IMAGE_URL
@@ -194,49 +214,35 @@ spec:
         workspace: git-auth
       - name: netrc
         workspace: netrc
-    - name: build-container
+    - matrix:
+        params:
+        - name: PLATFORM
+          value:
+          - $(params.macos-platforms)
+    - name: build-macos-native
       params:
-      - name: IMAGE
-        value: $(params.output-image)
-      - name: DOCKERFILE
-        value: $(params.dockerfile)
-      - name: CONTEXT
-        value: $(params.path-context)
-      - name: HERMETIC
-        value: $(params.hermetic)
-      - name: PREFETCH_INPUT
-        value: $(params.prefetch-input)
-      - name: IMAGE_EXPIRES_AFTER
-        value: $(params.image-expires-after)
-      - name: COMMIT_SHA
-        value: $(tasks.clone-repository.results.commit)
-      - name: BUILD_ARGS
-        value:
-        - $(params.build-args[*])
-      - name: BUILD_ARGS_FILE
-        value: $(params.build-args-file)
-      - name: PRIVILEGED_NESTED
-        value: $(params.privileged-nested)
-      - name: SOURCE_URL
-        value: $(tasks.clone-repository.results.url)
-      - name: BUILDAH_FORMAT
-        value: $(params.buildah-format)
-      - name: HTTP_PROXY
-        value: $(tasks.init.results.http-proxy)
-      - name: NO_PROXY
-        value: $(tasks.init.results.no-proxy)
+      - name: OUTPUT_IMAGE
+        value: $(params.output-image)-macos
       - name: SOURCE_ARTIFACT
         value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
-      - name: CACHI2_ARTIFACT
-        value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
+      - name: BUILD_DEPENDENCIES
+        value: $(params.macos-build-dependencies)
+      - name: BUILD_SCRIPT
+        value: $(params.macos-build-script)
+      - name: OUTPUT_ARTIFACT_DIRECTORY
+        value: $(params.macos-output-directory)
+      - name: OUTPUT_ARTIFACT_NAME
+        value: $(params.macos-output-artifact)
+      - name: IMAGE_APPEND_PLATFORM
+        value: "true"
       runAfter:
       - prefetch-dependencies
       taskRef:
         params:
         - name: name
-          value: buildah-oci-ta
+          value: build-macos-native-oci-ta
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-buildah-oci-ta:0.7@sha256:2de614f405527e779534a5d1a1293a528c482aa6abebc8ea158ad47e4be5dea4
+          value: quay.io/arewm/tekton-tasks:build-macos-native-oci-ta-0.5@sha256:dcc2f1d01d335e82eb6dd39de4d8af7ac9b1af11c60625f0b979c19635b9530e
         - name: kind
           value: task
         resolver: bundles
@@ -257,11 +263,11 @@ spec:
         value: $(params.build-image-index)
       - name: IMAGES
         value:
-        - $(tasks.build-container.results.IMAGE_URL)@$(tasks.build-container.results.IMAGE_DIGEST)
+        - $(tasks.build-macos-native.results.IMAGE_REFERENCE[*])
       - name: BUILDAH_FORMAT
         value: $(params.buildah-format)
       runAfter:
-      - build-container
+      - build-macos-native
       taskRef:
         params:
         - name: name
